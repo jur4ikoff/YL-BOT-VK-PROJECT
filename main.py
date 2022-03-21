@@ -12,25 +12,31 @@ from wtforms.validators import DataRequired
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired
-
-# from data import db_session, news_api, news_resources, users_resource, jobs_resource
-
+from data import db_session
 
 vk_session = vk_api.VkApi(token=main_token)
 session_api = vk_session.get_api()
 longpool = VkLongPoll(vk_session)
+
+def db_create():
+    db_session.global_init("db/Vk_bot.db")
 
 
 def sender(text, id):
     vk_session.method('messages.send', {'user_id': id, 'message': text, 'random_id': 0})
 
 
+def if_msg_hello(msg, id):
+    if msg.lower() == 'привет':
+        sender(id=id, text='И тебе привет!')
+
+db_create()
+
 for event in longpool.listen():
     if event.type == VkEventType.MESSAGE_NEW:
         if event.to_me:
             msg = event.text
             id = event.user_id
-            if msg.lower() == 'привет':
-                sender(id=id, text='И тебе привет!')
+            if_msg_hello(id=id, msg=msg)
 
-            print(event)
+
