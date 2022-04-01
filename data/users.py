@@ -15,6 +15,9 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     vk_id = sqlalchemy.Column(sqlalchemy.Integer, unique=True)
     name = sqlalchemy.Column(sqlalchemy.String)
     surname = sqlalchemy.Column(sqlalchemy.String)
+    city = sqlalchemy.Column(sqlalchemy.String)
+    bdate = sqlalchemy.Column(sqlalchemy.String)
+    sex = sqlalchemy.Column(sqlalchemy.String)
     # email = sqlalchemy.Column(sqlalchemy.String,
     #                          index=True, unique=True, nullable=True)
     # age = sqlalchemy.Column(sqlalchemy.Integer,
