@@ -46,29 +46,37 @@ def main():
     vk_session = vk_api.VkApi(token=TOKEN)
     vk = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
+    hello_count = 0
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW:
             if event.to_me:
                 id = event.user_id
                 user_name = None  # Заглушка
                 user_surname = None
-                is_first_msg = True  # Проеверка на первое сообщение
+                is_first_msg = True  # Проверка на первое сообщение
                 for user in db_sess.query(User).all():
                     if user.vk_id == id:
                         user_name = user.name  # Берем ФИО из Дб
                         user_surname = user.surname
                         is_first_msg = False
-                if is_first_msg:
-                    # Если первое сообщение >>> Приветствие
-                    vk.messages.send(peer_id=id, random_id=0, message='Привет, это бот для проекта. \n'
-                                                                      'Ниже прикреплены команды бота ')
-                    first_name, last_name, sex, bdate, city = get_info(vk, vk_session, id)  # Получаем информацию
-                    add_db(id, first_name, last_name, sex, bdate, city)  # Добавляем в дб
-                else:
-                    # Если есть в базе данных >>>
-                    vk.messages.send(peer_id=id, random_id=0,
-                                     message=f'Я тебя помню, тебя зовут - {user_name} {user_surname} . \n'
-                                             'чтобы узнать о командах напишите "/help" ')
+                msg = event.text
+                if hello_count == 0:
+                    if is_first_msg:
+                        # Если первое сообщение >>> Приветствие
+                        vk.messages.send(peer_id=id, random_id=0, message='Привет, это бот для проекта. \n'
+                                                                          'Ниже прикреплены команды бота ')
+                        first_name, last_name, sex, bdate, city = get_info(vk, vk_session, id)  # Получаем информацию
+                        add_db(id, first_name, last_name, sex, bdate, city)  # Добавляем в дб
+                        hello_count += 1
+                    else:
+                        # Если есть в базе данных >>>
+                        vk.messages.send(peer_id=id, random_id=0,
+                                         message=f'Я тебя помню, тебя зовут - {user_name} {user_surname} . \n'
+                                                 'чтобы узнать о командах напишите "/help" ')
+                        hello_count += 1
+
+                if msg == '/help':
+                    help(vk, id)
 
 
 def get_info(vk, vk_session, id):
@@ -92,6 +100,17 @@ def get_info(vk, vk_session, id):
     return firstname, last_name, sex, bdate, city
 
 
+def help(vk, id):
+    vk.messages.send(peer_id=id, random_id=0,
+                     message=f'"/info <address>" - Получить информацию о адрессе \n'
+                             f'"/map <type of map> <address>" - Получить информацию по координатам \n'
+                             f'"/distance <coord1> coord2>" - Расстояние между точками на карте \n' 
+                             f'"/metro <address>" - Поиск ближайшего метро \n'
+                             f'"/wiki <request>" - Поиск по введеному \n'
+                             f'/get_vk_info <user_id> - Поиск информации о юзере вк. \n'
+                             f'Все параметры вводить строго через пробел')
+
+
 def get_photos(album_id, group_id, id, vk):
     photos = []
     vk_user_session = vk_api.VkApi(token=user_token)
@@ -106,21 +125,6 @@ def get_photos(album_id, group_id, id, vk):
     attachment = attachment[3]
     print(attachment)
     vk.messages.send(peer_id=id, random_id=0, attachment=attachment)
-
-
-def send_time_now(event, vk, id, time_flag):
-    weekday = ['понедельник', 'вторник', "среда", "четверг", "пятница", "суббота", "воскресенье"]
-    msc = datetime.datetime.now()
-    if time_flag:
-        vk.messages.send(user_id=id,
-                         message=f"Дата: {msc.day}.{msc.month}.{msc.year}, время: {msc.hour}:{msc.minute},"
-                                 f" день недели: {weekday[msc.weekday()]}",
-                         random_id=random.randint(0, 2 ** 64))
-    else:
-        vk.messages.send(user_id=id,
-                         message=f'вы можете увидеть время по ключевым словам: «время», «число», «дата», «день»',
-                         random_id=random.randint(0, 2 ** 64))
-
 
 def wiki_search(vk, id, msg):
     global count_1
