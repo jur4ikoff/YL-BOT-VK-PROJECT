@@ -1,4 +1,5 @@
 from vk_api.longpoll import VkLongPoll, VkEventType
+from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from tokens import bot_token as TOKEN
 from tokens import user_token
 from data.users import User
@@ -18,7 +19,7 @@ vk_session = vk_api.VkApi(token=TOKEN)
 session_api = vk_session.get_api()
 longpool = VkLongPoll(vk_session)
 
-
+commands_history = []
 def db_create():
     db_session.global_init("db/Vk_bot.db")
 
@@ -38,6 +39,7 @@ def add_db(id, first_name, last_name, sex, bdate, city):  # Добавление
 
 
 def main():
+    global commands_history
     db_session.global_init("db/Vk_bot.db")
     db_sess = db_session.create_session()
     user_id = 363431143
@@ -59,7 +61,7 @@ def main():
                         user_name = user.name  # Берем ФИО из Дб
                         user_surname = user.surname
                         is_first_msg = False
-                msg = event.text
+                msg = event.text.lower()
                 if hello_count == 0:
                     if is_first_msg:
                         # Если первое сообщение >>> Приветствие
@@ -74,10 +76,15 @@ def main():
                                          message=f'Я тебя помню, тебя зовут - {user_name} {user_surname} . \n'
                                                  'чтобы узнать о командах напишите "/help" ')
                         hello_count += 1
-
+                commands_history.append(msg)
+                get_keyboard_1()
                 if msg == '/help':
                     help(vk, id)
+                if '/wiki' in msg:
+                    wiki_search(vk, id, msg)
 
+def get_keyboard_1():
+    keyboard = VkKeyboard(one_time=False)
 
 def get_info(vk, vk_session, id):
     responce = vk.users.get(user_ids=id, fields='city,bdate,city,sex')
@@ -102,13 +109,13 @@ def get_info(vk, vk_session, id):
 
 def help(vk, id):
     vk.messages.send(peer_id=id, random_id=0,
-                     message=f'"/info <address>" - Получить информацию о адрессе \n'
+                     message=f'"/info" - Получить информацию о адрессе \n'
                              f'"/map <type of map> <address>" - Получить информацию по координатам \n'
-                             f'"/distance <coord1> coord2>" - Расстояние между точками на карте \n' 
+                             f'"/distance <coord1> coord2>" - Расстояние между точками на карте \n'
                              f'"/metro <address>" - Поиск ближайшего метро \n'
                              f'"/wiki <request>" - Поиск по введеному \n'
                              f'/get_vk_info <user_id> - Поиск информации о юзере вк. \n'
-                             f'Все параметры вводить строго через пробел')
+                             f'"/repeat_last_request" - Повторить предыдущий запрос \n')
 
 
 def get_photos(album_id, group_id, id, vk):
@@ -126,8 +133,10 @@ def get_photos(album_id, group_id, id, vk):
     print(attachment)
     vk.messages.send(peer_id=id, random_id=0, attachment=attachment)
 
+
 def wiki_search(vk, id, msg):
-    global count_1
+    print(msg)
+    msg = msg.replace('/wiki ', '')
     wikipedia.set_lang('ru')
     try:
         a = wikipedia.summary(msg)
@@ -135,7 +144,7 @@ def wiki_search(vk, id, msg):
                          message=a,
                          random_id=random.randint(0, 2 ** 64))
         vk.messages.send(user_id=id,
-                         message=f'Новый поисковый запрос:',
+                         message=f'Если хотите повторить запрос, введите команду "/repeat_last_request"',
                          random_id=random.randint(0, 2 ** 64))
     except Exception:
         vk.messages.send(user_id=id,
