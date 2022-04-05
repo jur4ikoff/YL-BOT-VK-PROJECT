@@ -4,6 +4,7 @@ from tokens import bot_token as TOKEN
 from tokens import user_token
 from data.users import User
 import vk_api
+import requests
 import random
 import time
 import datetime
@@ -88,11 +89,14 @@ def main():
                     get_keyboard_1(vk, id)
                 if '/wiki' == msg:
                     wiki_dilog(vk, id, event, vk_session)
+                if '/info' == msg:
+                    get_geo(vk, id, vk_session)
 
 
 def get_keyboard_1(vk, id):
     keyboard = VkKeyboard(one_time=True)
     keyboard.add_button(label='/wiki', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_button(label='/info', color=VkKeyboardColor.PRIMARY)
     vk.messages.send(peer_id=id, random_id=0, message='Клавиатура с возможными командами',
                      keyboard=keyboard.get_keyboard())
 
@@ -152,12 +156,54 @@ def wiki_dilog(vk, id, event, vk_session):
 def help(vk, id):
     vk.messages.send(peer_id=id, random_id=0,
                      message=f'"/info" - Получить информацию о адрессе \n'
+                             f'"/org" - Информация об организации \n'
                              f'"/map <type of map> <address>" - Получить информацию по координатам \n'
                              f'"/distance <coord1> coord2>" - Расстояние между точками на карте \n'
                              f'"/metro <address>" - Поиск ближайшего метро \n'
                              f'"/wiki" - Поиск по запросу \n'
                              f'/get_vk_info <user_id> - Поиск информации о юзере вк. \n'
                              f'"/repeat_last_request" - Повторить предыдущий запрос \n')
+
+
+def get_geo(vk, id, vk_session):
+    longpoll = VkLongPoll(vk_session)
+    vk.messages.send(peer_id=id, random_id=0, message='Введите запрос:')
+    sys_count = 0
+    for event in longpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW:
+            if event.to_me:
+                geocode_msg = event.text
+                api_server = "http://geocode-maps.yandex.ru/1.x/"
+
+                params = {
+                    "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
+                    "geocode": geocode_msg,
+                    "format": "json"
+                }
+                response = requests.get(api_server, params=params)
+                if response:
+                    json_response = response.json()
+                    lower_coords = json_response["response"]["GeoObjectCollection"]["metaDataProperty"][
+                        "GeocoderResponseMetaData"]["boundedBy"]["Envelope"]["lowerCorner"]
+                    upper_coords = json_response["response"]["GeoObjectCollection"]["metaDataProperty"][
+                        "GeocoderResponseMetaData"]["boundedBy"]["Envelope"]["lowerCorner"]
+                    city = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"][
+                        "metaDataProperty"]["GeocoderMetaData"]["text"]
+                    district = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"][
+                        "metaDataProperty"]["GeocoderMetaData"]["Address"]["Components"][1]["name"]
+                    vk.messages.send(user_id=id,
+                                     message=f'Город - {city}, координаты - {lower_coords, upper_coords}, \n'
+                                             f'Административный округ - {district}',
+                                     random_id=random.randint(0, 2 ** 64))
+                    if sys_count == 0:
+                        vk.messages.send(user_id=id,
+                                         message=f'Вы можете повторить запрос в чате.'
+                                                 f'Чтобы выйти в меню"/help" \n',
+                                         random_id=random.randint(0, 2 ** 64))
+                        sys_count += 1
+                else:
+                    print("Ошибка выполнения запроса:")
+                    print("Http статус:", response.status_code, "(", response.reason, ")")
 
 
 def get_photos(album_id, group_id, id, vk):
