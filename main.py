@@ -91,12 +91,15 @@ def main():
                     wiki_dilog(vk, id, event, vk_session)
                 if '/info' == msg:
                     get_geo(vk, id, vk_session)
+                if '/org' == msg:
+                    get_org(vk, id, vk_session)
 
 
 def get_keyboard_1(vk, id):
     keyboard = VkKeyboard(one_time=True)
     keyboard.add_button(label='/wiki', color=VkKeyboardColor.PRIMARY)
     keyboard.add_button(label='/info', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_button(label='/org', color=VkKeyboardColor.PRIMARY)
     vk.messages.send(peer_id=id, random_id=0, message='Клавиатура с возможными командами',
                      keyboard=keyboard.get_keyboard())
 
@@ -162,7 +165,8 @@ def help(vk, id):
                              f'"/metro <address>" - Поиск ближайшего метро \n'
                              f'"/wiki" - Поиск по запросу \n'
                              f'/get_vk_info <user_id> - Поиск информации о юзере вк. \n'
-                             f'"/repeat_last_request" - Повторить предыдущий запрос \n')
+                             f'"/repeat_last_request" - Повторить предыдущий запрос \n'
+                             f'"/bomber" - Бомбер телефона')
 
 
 def get_geo(vk, id, vk_session):
@@ -204,6 +208,90 @@ def get_geo(vk, id, vk_session):
                 else:
                     print("Ошибка выполнения запроса:")
                     print("Http статус:", response.status_code, "(", response.reason, ")")
+
+
+def get_org(vk, id, vk_session):
+    longpoll = VkLongPoll(vk_session)
+    vk.messages.send(peer_id=id, random_id=0, message='Введите запрос: Адресс + название заведения')
+    sys_count = 0
+    try:
+        for event in longpoll.listen():
+            if event.type == VkEventType.MESSAGE_NEW:
+                if event.to_me:
+                    org_msg = event.text
+                    search_api_server = "https://search-maps.yandex.ru/v1/"
+                    api_key = "8e405774-72a5-4bc5-8061-c703891b2a5f"
+
+                    search_params = {
+                        "apikey": api_key,
+                        "text": org_msg,
+                        "lang": "ru_RU",
+                        "type": "biz"
+                    }
+
+                    response = requests.get(search_api_server, params=search_params)
+                    if response:
+                        site2 = None
+                        site = None
+                        json_response = response.json()
+                        org_name = json_response["features"][0]["properties"]["CompanyMetaData"]["name"]
+                        org_address = json_response["features"][0]["properties"]["CompanyMetaData"]["address"]
+                        try:
+                            if json_response["features"][0]["properties"]["CompanyMetaData"]["url"]:
+                                site = json_response["features"][0]["properties"]["CompanyMetaData"]["url"]
+                        except KeyError:
+                            pass
+                        phone = json_response["features"][0]["properties"]["CompanyMetaData"]["Phones"][0]["formatted"]
+
+                        org_name2 = json_response["features"][1]["properties"]["CompanyMetaData"]["name"]
+                        org_address2 = json_response["features"][1]["properties"]["CompanyMetaData"]["address"]
+                        try:
+                            if json_response["features"][1]["properties"]["CompanyMetaData"]["url"]:
+                                site2 = json_response["features"][1]["properties"]["CompanyMetaData"]["url"]
+                        except KeyError:
+                            pass
+                        phone2 = json_response["features"][1]["properties"]["CompanyMetaData"]["Phones"][0]["formatted"]
+                        if site:
+                            vk.messages.send(user_id=id,
+                                             message=f'Самый ликвидный вариант: \n'
+                                                     f'Название: {org_name}, адрес: {org_address} \n'
+                                                     f'Сайт: {site} \n'
+                                                     f'Телефон: {phone}',
+                                             random_id=random.randint(0, 2 ** 64))
+                        if not site:
+                            vk.messages.send(user_id=id,
+                                             message=f'Самый ликвидный вариант: \n'
+                                                     f'Название: {org_name}, адрес: {org_address} \n'
+                                                     f'Телефон: {phone}',
+                                             random_id=random.randint(0, 2 ** 64))
+
+                        if site2:
+                            vk.messages.send(user_id=id,
+                                             message=f'Второй ближайший магазин: \n'
+                                                     f'Название: {org_name2}, адрес: {org_address2} \n'
+                                                     f'Сайт: {site2} \n'
+                                                     f'Телефон: {phone2}',
+                                             random_id=random.randint(0, 2 ** 64))
+                        if not site2:
+                            vk.messages.send(user_id=id,
+                                             message=f'Второй ближайший магазин: \n'
+                                                     f'Название: {org_name2}, адрес: {org_address2} \n'
+                                                     f'Телефон: {phone2}',
+                                             random_id=random.randint(0, 2 ** 64))
+                        if sys_count == 0:
+                            vk.messages.send(user_id=id,
+                                             message=f'Вы можете повторить запрос в чате.  '
+                                                     f'Чтобы выйти в меню"/help" \n',
+                                             random_id=random.randint(0, 2 ** 64))
+                            sys_count += 1
+                    else:
+                        print("Ошибка выполнения запроса:")
+                        print("Http статус:", response.status_code, "(", response.reason, ")")
+    except Exception as e:
+        vk.messages.send(user_id=id,
+                         message=f'Упсс. Ничего не нашлось',
+                         random_id=random.randint(0, 2 ** 64))
+        print(e)
 
 
 def get_photos(album_id, group_id, id, vk):

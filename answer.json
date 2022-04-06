@@ -1,71 +1,523 @@
 {
-  'response': {
-    'GeoObjectCollection': {
-      'metaDataProperty': {
-        'GeocoderResponseMetaData': {
-          'boundedBy': {
-            'Envelope': {
-              'lowerCorner': '37.038186 55.312148',
-              'upperCorner': '38.2026 56.190802'
-            }
-          },
-          'request': 'Москва',
-          'results': '10',
-          'found': '1'
-        }
+  'type': 'FeatureCollection',
+  'properties': {
+    'ResponseMetaData': {
+      'SearchResponse': {
+        'found': 35,
+        'display': 'multiple'
       },
-      'featureMember': [
-        {
-          'GeoObject': {
-            'metaDataProperty': {
-              'GeocoderMetaData': {
-                'precision': 'other',
-                'text': 'Россия, Москва',
-                'kind': 'province',
-                'Address': {
-                  'country_code': 'RU',
-                  'formatted': 'Россия, Москва',
-                  'Components': [
-                    {
-                      'kind': 'country',
-                      'name': 'Россия'
-                    },
-                    {
-                      'kind': 'province',
-                      'name': 'Центральный федеральный округ'
-                    },
-                    {
-                      'kind': 'province',
-                      'name': 'Москва'
-                    }
-                  ]
-                },
-                'AddressDetails': {
-                  'Country': {
-                    'AddressLine': 'Россия, Москва',
-                    'CountryNameCode': 'RU',
-                    'CountryName': 'Россия',
-                    'AdministrativeArea': {
-                      'AdministrativeAreaName': 'Москва'
-                    }
-                  }
-                }
-              }
-            },
-            'name': 'Москва',
-            'description': 'Россия',
-            'boundedBy': {
-              'Envelope': {
-                'lowerCorner': '36.803268 55.142226',
-                'upperCorner': '37.967799 56.021286'
-              }
-            },
-            'Point': {
-              'pos': '37.622513 55.75322'
+      'SearchRequest': {
+        'request': 'Производственная 12к1 Магазин',
+        'skip': 0,
+        'results': 10,
+        'boundedBy': [
+          [
+            37.048427,
+            55.43644866
+          ],
+          [
+            38.175903,
+            56.04690174
+          ]
+        ]
+      }
+    }
+  },
+  'features': [
+    {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [
+          37.39111,
+          55.64305
+        ]
+      },
+      'properties': {
+        'name': 'Перекрёсток',
+        'description': 'Производственная ул., 12, корп. 2, Москва, Россия',
+        'boundedBy': [
+          [
+            37.387002,
+            55.640736
+          ],
+          [
+            37.395212,
+            55.64538
+          ]
+        ],
+        'CompanyMetaData': {
+          'id': '29720906470',
+          'name': 'Перекрёсток',
+          'address': 'Россия, Москва, Производственная улица, 12, корп. 2',
+          'url': 'https://www.perekrestok.ru/',
+          'Phones': [
+            {
+              'type': 'phone',
+              'formatted': '8 (800) 200-95-55'
             }
+          ],
+          'Categories': [
+            {
+              'class': 'supermarket',
+              'name': 'Супермаркет'
+            },
+            {
+              'class': 'supermarket',
+              'name': 'Магазин продуктов'
+            }
+          ],
+          'Hours': {
+            'text': 'ежедневно, 08:00–23:00',
+            'Availabilities': [
+              {
+                'Intervals': [
+                  {
+                    'from': '08:00:00',
+                    'to': '23:00:00'
+                  }
+                ],
+                'Everyday': True
+              }
+            ]
           }
         }
-      ]
+      }
+    },
+    {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [
+          37.389337,
+          55.644527
+        ]
+      },
+      'properties': {
+        'name': 'Порт Пивных Дегустаторов',
+        'description': 'Производственная ул., 12, корп. 1, Москва, Россия',
+        'boundedBy': [
+          [
+            37.384675,
+            55.641905
+          ],
+          [
+            37.392886,
+            55.646548
+          ]
+        ],
+        'CompanyMetaData': {
+          'id': '64392372786',
+          'name': 'Порт Пивных Дегустаторов',
+          'address': 'Россия, Москва, Производственная улица, 12, корп. 1',
+          'Phones': [
+            {
+              'type': 'phone',
+              'formatted': '+7 (925) 614-39-46'
+            }
+          ],
+          'Categories': [
+            {
+              'class': 'malls',
+              'name': 'Магазин пива'
+            },
+            {
+              'class': 'supermarket',
+              'name': 'Магазин рыбы и морепродуктов'
+            },
+            {
+              'class': 'malls',
+              'name': 'Магазин алкогольных напитков'
+            }
+          ],
+          'Hours': {
+            'text': 'ежедневно, 11:00–23:00',
+            'Availabilities': [
+              {
+                'Intervals': [
+                  {
+                    'from': '11:00:00',
+                    'to': '23:00:00'
+                  }
+                ],
+                'Everyday': True
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [
+          37.39111,
+          55.643176
+        ]
+      },
+      'properties': {
+        'name': 'Купиеды',
+        'description': 'Производственная ул., 12, корп. 2, Москва, Россия',
+        'boundedBy': [
+          [
+            37.387002,
+            55.640736
+          ],
+          [
+            37.395212,
+            55.64538
+          ]
+        ],
+        'CompanyMetaData': {
+          'id': '19223677311',
+          'name': 'Купиеды',
+          'address': 'Россия, Москва, Производственная улица, 12, корп. 2',
+          'Categories': [
+            {
+              'class': 'supermarket',
+              'name': 'Магазин продуктов'
+            },
+            {
+              'class': 'supermarket',
+              'name': 'Магазин кулинарии'
+            }
+          ]
+        }
+      }
+    },
+    {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [
+          37.391317,
+          55.642964
+        ]
+      },
+      'properties': {
+        'name': 'Пятёрочка',
+        'description': 'Производственная ул., 12, корп. 2, Москва, Россия',
+        'boundedBy': [
+          [
+            37.387002,
+            55.640736
+          ],
+          [
+            37.395212,
+            55.64538
+          ]
+        ],
+        'CompanyMetaData': {
+          'id': '194992018440',
+          'name': 'Пятёрочка',
+          'address': 'Россия, Москва, Производственная улица, 12, корп. 2',
+          'url': 'https://5ka.ru/',
+          'Phones': [
+            {
+              'type': 'phone',
+              'formatted': '8 (800) 555-55-05'
+            }
+          ],
+          'Categories': [
+            {
+              'class': 'supermarket',
+              'name': 'Супермаркет'
+            }
+          ],
+          'Hours': {
+            'text': 'ежедневно, 08:00–23:00',
+            'Availabilities': [
+              {
+                'Intervals': [
+                  {
+                    'from': '08:00:00',
+                    'to': '23:00:00'
+                  }
+                ],
+                'Everyday': True
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [
+          37.39085,
+          55.643238
+        ]
+      },
+      'properties': {
+        'name': 'Мясо',
+        'description': 'Производственная ул., 12, корп. 2, Москва, Россия',
+        'boundedBy': [
+          [
+            37.387002,
+            55.640736
+          ],
+          [
+            37.395212,
+            55.64538
+          ]
+        ],
+        'CompanyMetaData': {
+          'id': '39998834929',
+          'name': 'Мясо',
+          'address': 'Россия, Москва, Производственная улица, 12, корп. 2',
+          'Categories': [
+            {
+              'class': 'supermarket',
+              'name': 'Магазин мяса, колбас'
+            }
+          ]
+        }
+      }
+    },
+    {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [
+          37.390323,
+          55.643899
+        ]
+      },
+      'properties': {
+        'name': 'Fresh Land',
+        'description': 'Производственная ул., 12, корп. 1, Москва, Россия',
+        'boundedBy': [
+          [
+            37.384675,
+            55.641905
+          ],
+          [
+            37.392886,
+            55.646548
+          ]
+        ],
+        'CompanyMetaData': {
+          'id': '47107337521',
+          'name': 'Fresh Land',
+          'address': 'Россия, Москва, Производственная улица, 12, корп. 1',
+          'Phones': [
+            {
+              'type': 'phone',
+              'formatted': '+7 (915) 159-75-38'
+            }
+          ],
+          'Categories': [
+            {
+              'class': 'supermarket',
+              'name': 'Магазин овощей и фруктов'
+            },
+            {
+              'class': 'supermarket',
+              'name': 'Продуктовый рынок'
+            },
+            {
+              'class': 'supermarket',
+              'name': 'Орехи, снеки, сухофрукты'
+            }
+          ],
+          'Hours': {
+            'text': 'ежедневно, 09:00–22:00',
+            'Availabilities': [
+              {
+                'Intervals': [
+                  {
+                    'from': '09:00:00',
+                    'to': '22:00:00'
+                  }
+                ],
+                'Everyday': True
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [
+          37.385091,
+          55.643983
+        ]
+      },
+      'properties': {
+        'name': 'Продукты',
+        'description': 'Производственная ул., 10, корп. 1, Москва, Россия',
+        'boundedBy': [
+          [
+            37.381765,
+            55.642382
+          ],
+          [
+            37.389975,
+            55.647026
+          ]
+        ],
+        'CompanyMetaData': {
+          'id': '237865635203',
+          'name': 'Продукты',
+          'address': 'Россия, Москва, Производственная улица, 10, корп. 1',
+          'Categories': [
+            {
+              'class': 'supermarket',
+              'name': 'Магазин продуктов'
+            }
+          ]
+        }
+      }
+    },
+    {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [
+          37.391136,
+          55.643177
+        ]
+      },
+      'properties': {
+        'name': 'Кубанский фермер',
+        'description': 'Производственная ул., 12, корп. 2, Москва, Россия',
+        'boundedBy': [
+          [
+            37.387002,
+            55.640731
+          ],
+          [
+            37.395212,
+            55.645375
+          ]
+        ],
+        'CompanyMetaData': {
+          'id': '220515637634',
+          'name': 'Кубанский фермер',
+          'address': 'Россия, Москва, Производственная улица, 12, корп. 2',
+          'Categories': [
+            {
+              'class': 'supermarket',
+              'name': 'Магазин мяса, колбас'
+            }
+          ]
+        }
+      }
+    },
+    {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [
+          37.38546,
+          55.645837
+        ]
+      },
+      'properties': {
+        'name': 'Пятёрочка',
+        'description': 'Производственная ул., 8, корп. 1, Москва, Россия',
+        'boundedBy': [
+          [
+            37.381872,
+            55.643901
+          ],
+          [
+            37.390083,
+            55.648545
+          ]
+        ],
+        'CompanyMetaData': {
+          'id': '139053544440',
+          'name': 'Пятёрочка',
+          'address': 'Россия, Москва, Производственная улица, 8, корп. 1',
+          'Categories': [
+            {
+              'class': 'supermarket',
+              'name': 'Магазин продуктов'
+            },
+            {
+              'class': 'supermarket',
+              'name': 'Супермаркет'
+            }
+          ],
+          'Hours': {
+            'text': 'ежедневно, 09:00–23:00',
+            'Availabilities': [
+              {
+                'Intervals': [
+                  {
+                    'from': '09:00:00',
+                    'to': '23:00:00'
+                  }
+                ],
+                'Everyday': True
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [
+          37.384845,
+          55.643046
+        ]
+      },
+      'properties': {
+        'name': 'Верный',
+        'description': 'Производственная ул., 10, корп. 2, Москва, Россия',
+        'boundedBy': [
+          [
+            37.380893,
+            55.640823
+          ],
+          [
+            37.389104,
+            55.645466
+          ]
+        ],
+        'CompanyMetaData': {
+          'id': '235388055979',
+          'name': 'Верный',
+          'address': 'Россия, Москва, Производственная улица, 10, корп. 2',
+          'url': 'https://www.verno-info.ru/',
+          'Phones': [
+            {
+              'type': 'phone',
+              'formatted': '8 (800) 250-66-48'
+            }
+          ],
+          'Categories': [
+            {
+              'class': 'supermarket',
+              'name': 'Магазин продуктов'
+            }
+          ],
+          'Hours': {
+            'text': 'ежедневно, 08:00–23:00',
+            'Availabilities': [
+              {
+                'Intervals': [
+                  {
+                    'from': '08:00:00',
+                    'to': '23:00:00'
+                  }
+                ],
+                'Everyday': True
+              }
+            ]
+          }
+        }
+      }
     }
-  }
+  ]
 }
