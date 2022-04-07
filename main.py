@@ -2,14 +2,19 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from tokens import bot_token as TOKEN
 from tokens import user_token
+from find_spn import check_spn
 from data.users import User
 import vk_api
 import requests
 import random
+import PIL
+from io import BytesIO
+from PIL import Image
 import time
 import datetime
 from flask.sessions import *
 from data import db_session
+import sys
 import wikipedia
 
 from flask import Flask, render_template, redirect, request, make_response, url_for, abort, jsonify
@@ -21,7 +26,6 @@ vk_session = vk_api.VkApi(token=TOKEN)
 session_api = vk_session.get_api()
 longpool = VkLongPoll(vk_session)
 
-commands_history = []
 lang_flag = False
 
 
@@ -83,7 +87,6 @@ def main():
                                          message=f'Я тебя помню, тебя зовут - {user_name} {user_surname} . \n'
                                                  'чтобы узнать о командах напишите "/help" ')
                         hello_count += 1
-                commands_history.append(msg)
                 if msg == '/help':
                     help(vk, id)
                     get_keyboard_1(vk, id)
@@ -93,6 +96,8 @@ def main():
                     get_geo(vk, id, vk_session)
                 if '/org' == msg:
                     get_org(vk, id, vk_session)
+                if '/map' == msg:
+                    map(vk, id, vk_session)
 
 
 def get_keyboard_1(vk, id):
@@ -100,6 +105,7 @@ def get_keyboard_1(vk, id):
     keyboard.add_button(label='/wiki', color=VkKeyboardColor.PRIMARY)
     keyboard.add_button(label='/info', color=VkKeyboardColor.PRIMARY)
     keyboard.add_button(label='/org', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_button(label='/map', color=VkKeyboardColor.PRIMARY)
     vk.messages.send(peer_id=id, random_id=0, message='Клавиатура с возможными командами',
                      keyboard=keyboard.get_keyboard())
 
@@ -160,8 +166,7 @@ def help(vk, id):
     vk.messages.send(peer_id=id, random_id=0,
                      message=f'"/info" - Получить информацию о адрессе \n'
                              f'"/org" - Информация об организации \n'
-                             f'"/map <type of map> <address>" - Получить информацию по координатам \n'
-                             f'"/distance <coord1> coord2>" - Расстояние между точками на карте \n'
+                             f'"/map" - Получить информацию по координатам \n'
                              f'"/metro <address>" - Поиск ближайшего метро \n'
                              f'"/wiki" - Поиск по запросу \n'
                              f'/get_vk_info <user_id> - Поиск информации о юзере вк. \n'
@@ -176,9 +181,12 @@ def get_geo(vk, id, vk_session):
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW:
             if event.to_me:
+                city, lower_coords, upper_coords, district = None, None, None, None
                 geocode_msg = event.text
                 api_server = "http://geocode-maps.yandex.ru/1.x/"
-
+                if geocode_msg == '/main':
+                    help(vk, id)
+                    break
                 params = {
                     "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
                     "geocode": geocode_msg,
@@ -187,32 +195,50 @@ def get_geo(vk, id, vk_session):
                 response = requests.get(api_server, params=params)
                 if response:
                     json_response = response.json()
-                    lower_coords = json_response["response"]["GeoObjectCollection"]["metaDataProperty"][
-                        "GeocoderResponseMetaData"]["boundedBy"]["Envelope"]["lowerCorner"]
-                    upper_coords = json_response["response"]["GeoObjectCollection"]["metaDataProperty"][
-                        "GeocoderResponseMetaData"]["boundedBy"]["Envelope"]["lowerCorner"]
-                    city = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"][
-                        "metaDataProperty"]["GeocoderMetaData"]["text"]
-                    district = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"][
-                        "metaDataProperty"]["GeocoderMetaData"]["Address"]["Components"][1]["name"]
-                    vk.messages.send(user_id=id,
-                                     message=f'Город - {city}, координаты - {lower_coords, upper_coords}, \n'
-                                             f'Административный округ - {district}',
-                                     random_id=random.randint(0, 2 ** 64))
-                    if sys_count == 0:
+                    try:
+                        lower_coords = json_response["response"]["GeoObjectCollection"]["metaDataProperty"][
+                            "GeocoderResponseMetaData"]["boundedBy"]["Envelope"]["lowerCorner"]
+                        upper_coords = json_response["response"]["GeoObjectCollection"]["metaDataProperty"][
+                            "GeocoderResponseMetaData"]["boundedBy"]["Envelope"]["lowerCorner"]
+                        city = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"][
+                            "metaDataProperty"]["GeocoderMetaData"]["text"]
+                        district = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"][
+                            "metaDataProperty"]["GeocoderMetaData"]["Address"]["Components"][1]["name"]
+                    except KeyError:
                         vk.messages.send(user_id=id,
-                                         message=f'Вы можете повторить запрос в чате.'
-                                                 f'Чтобы выйти в меню"/help" \n',
+                                         message=f'Ошибка, Введите заново:\n'
+                                                 f'Чтобы выйти в меню"/main" \n',
                                          random_id=random.randint(0, 2 ** 64))
-                        sys_count += 1
-                else:
-                    print("Ошибка выполнения запроса:")
-                    print("Http статус:", response.status_code, "(", response.reason, ")")
+                    try:
+                        if city:
+                            vk.messages.send(user_id=id,
+                                             message=f'Город - {city}, координаты - {lower_coords, upper_coords}, \n'
+                                                     f'Административный округ - {district}',
+                                             random_id=random.randint(0, 2 ** 64))
+                        else:
+                            vk.messages.send(user_id=id,
+                                             message=f'Ничего не найдено',
+                                             random_id=random.randint(0, 2 ** 64))
+                        if sys_count == 0:
+                            vk.messages.send(user_id=id,
+                                             message=f'Вы можете повторить запрос в чате.'
+                                                     f'Чтобы выйти в меню"/main" \n',
+                                             random_id=random.randint(0, 2 ** 64))
+                            sys_count += 1
+                    except Exception:
+                        if geocode_msg == '/main':
+                            help(vk, id)
+                            break
+                        vk.messages.send(user_id=id,
+                                         message=f'Ошибка, Введите заново:',
+                                         random_id=random.randint(0, 2 ** 64))
+
+                        continue
 
 
 def get_org(vk, id, vk_session):
     longpoll = VkLongPoll(vk_session)
-    vk.messages.send(peer_id=id, random_id=0, message='Введите запрос: Адресс + название заведения')
+    vk.messages.send(peer_id=id, random_id=0, message='Введите запрос: Адрес + название заведения')
     sys_count = 0
     try:
         for event in longpoll.listen():
@@ -221,6 +247,9 @@ def get_org(vk, id, vk_session):
                     org_msg = event.text
                     search_api_server = "https://search-maps.yandex.ru/v1/"
                     api_key = "8e405774-72a5-4bc5-8061-c703891b2a5f"
+                    if org_msg == '/main':
+                        help(vk, id)
+                        break
 
                     search_params = {
                         "apikey": api_key,
@@ -281,7 +310,7 @@ def get_org(vk, id, vk_session):
                         if sys_count == 0:
                             vk.messages.send(user_id=id,
                                              message=f'Вы можете повторить запрос в чате.  '
-                                                     f'Чтобы выйти в меню"/help" \n',
+                                                     f'Чтобы выйти в меню"/main" \n',
                                              random_id=random.randint(0, 2 ** 64))
                             sys_count += 1
                     else:
@@ -293,6 +322,75 @@ def get_org(vk, id, vk_session):
                          random_id=random.randint(0, 2 ** 64))
         print(e)
 
+
+def map(vk, id, vk_session):
+    longpoll = VkLongPoll(vk_session)
+    vk.messages.send(peer_id=id, random_id=0, message='Введите координаты: широта долгота \n'
+                                                      'Пример: 38.518067 55.419967')
+    sys_count = 0
+    try:
+        for event in longpoll.listen():
+            if event.type == VkEventType.MESSAGE_NEW:
+                if event.to_me:
+                    coords = event.text
+                    if coords == '/main':
+                        help(vk, id)
+                        break
+                    crds = ','.join(coords.split(' '))
+                    text = None
+                    api_server = "http://geocode-maps.yandex.ru/1.x/"
+                    params = {
+                        "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
+                        "format": "json",
+                        "geocode": ','.join(coords.split(' '))
+                    }
+                    response = requests.get(api_server, params=params)
+                    if response:
+                        json_response = response.json()
+                        rsp = json_response["response"]["GeoObjectCollection"]["featureMember"][0]
+                        text = rsp["GeoObject"]["metaDataProperty"]["GeocoderMetaData"]["text"]
+                        toponym1 = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"][
+                            "boundedBy"]["Envelope"]
+                        low_corn, upper_corn = toponym1["lowerCorner"], toponym1["upperCorner"]  # размеры объекта
+                        delta1, delta2 = check_spn(low_corn, upper_corn)
+
+                        map_params = {
+                            "ll": crds,
+                            "spn": ",".join([str(delta1), str(delta2)]),
+                            "l": "map"
+                        }
+
+                        map_api_server = "http://static-maps.yandex.ru/1.x/"
+                        response2 = requests.get(map_api_server, params=map_params)
+                        im = Image.open(BytesIO(response2.content))
+                        im.save("temp.png")
+                        upload = vk_api.VkUpload(vk)
+                        photo = upload.photo_messages('temp.png')
+                        owner_id = photo[0]['owner_id']
+                        photo_id = photo[0]['id']
+                        access_key = photo[0]['access_key']
+                        attachment = f'photo{owner_id}_{photo_id}_{access_key}'
+                        vk.messages.send(user_id=id,
+                                         message=f'Найдено по запросу: {crds} \n'
+                                                 f'Описание: {text}\n',
+                                         attachment=attachment,
+                                         random_id=random.randint(0, 2 ** 64))
+                    else:
+                        vk.messages.send(user_id=id,
+                                         message=f'Ошибка',
+                                         random_id=random.randint(0, 2 ** 64))
+                    if sys_count == 0:
+                        vk.messages.send(user_id=id,
+                                         message=f'Вы можете повторить запрос в чате.  '
+                                                 f'Чтобы выйти в меню"/main" \n',
+                                         random_id=random.randint(0, 2 ** 64))
+                        sys_count += 1
+    except Exception:
+        vk.messages.send(user_id=id,
+                         message=f'Упс, ничего не нашлось...',
+                         random_id=random.randint(0, 2 ** 64))
+
+        map(vk, id, vk_session)
 
 def get_photos(album_id, group_id, id, vk):
     photos = []
