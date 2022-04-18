@@ -1,26 +1,16 @@
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from tokens import bot_token as TOKEN
-from tokens import user_token
 from find_spn import check_spn
 from data.users import User
 import vk_api
 import requests
 import random
-import PIL
 from io import BytesIO
 from PIL import Image
-import time
-import datetime
-from flask.sessions import *
 from data import db_session
 import sys
 import wikipedia
-
-from flask import Flask, render_template, redirect, request, make_response, url_for, abort, jsonify
-from flask_wtf import FlaskForm
-from flask_restful import reqparse, abort, Api, Resource
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
 vk_session = vk_api.VkApi(token=TOKEN)
 session_api = vk_session.get_api()
@@ -45,6 +35,16 @@ def add_db(id, first_name, last_name, sex, bdate, city):  # Добавление
     db_sess = db_session.create_session()
     db_sess.add(user)
     db_sess.commit()
+
+
+def help(vk, id):
+    vk.messages.send(peer_id=id, random_id=0,
+                     message=f'"/info" - Получить информацию о адрессе \n'
+                             f'"/org" - Информация об организации \n'
+                             f'"/map" - Получить информацию по координатам \n'
+                             f'"/metro" - Поиск ближайшего метро \n'
+                             f'"/wiki" - Поиск по запросу \n'
+                             f'/get_vk_info - Поиск информации о юзере вк. \n')
 
 
 def main():
@@ -73,6 +73,7 @@ def main():
                         user_surname = user.surname
                         is_first_msg = False
                 msg = event.text.lower()
+                print(user_name, msg)
                 if hello_count == 0:
                     if is_first_msg:
                         # Если первое сообщение >>> Приветствие
@@ -80,6 +81,7 @@ def main():
                                                                           'Ниже прикреплены команды бота ')
                         first_name, last_name, sex, bdate, city = get_info(vk, id)  # Получаем информацию
                         add_db(id, first_name, last_name, sex, bdate, city)  # Добавляем в дб
+                        help(vk, id)
                         hello_count += 1
                     else:
                         # Если есть в базе данных >>>
@@ -98,6 +100,10 @@ def main():
                     get_org(vk, id, vk_session)
                 if '/map' == msg:
                     map(vk, id, vk_session)
+                if '/metro' == msg:
+                    metro(vk, id, vk_session)
+                if '/get_vk_info' == msg:
+                    vk_info(vk, id, vk_session)
 
 
 def get_keyboard_1(vk, id):
@@ -106,6 +112,8 @@ def get_keyboard_1(vk, id):
     keyboard.add_button(label='/info', color=VkKeyboardColor.PRIMARY)
     keyboard.add_button(label='/org', color=VkKeyboardColor.PRIMARY)
     keyboard.add_button(label='/map', color=VkKeyboardColor.PRIMARY)
+    keyboard.add_button(label='/metro', color=VkKeyboardColor.PRIMARY)
+    # keyboard.add_button(label='/get_vk_info', color=VkKeyboardColor.PRIMARY)
     vk.messages.send(peer_id=id, random_id=0, message='Клавиатура с возможными командами',
                      keyboard=keyboard.get_keyboard())
 
@@ -129,6 +137,26 @@ def get_info(vk, id):
         except KeyError:
             pass
     return firstname, last_name, sex, bdate, city
+
+
+def vk_info(vk, id, vk_session):
+    longpoll = VkLongPoll(vk_session)
+    vk.messages.send(peer_id=id, random_id=0, message='Введите запрос:')
+    sys_count = 0
+    wikipedia.set_lang('ru')
+    for event in longpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW:
+            if event.to_me:
+                find_id = event.text
+                firstname, last_name, sex, bdate, city = get_info(vk, find_id)
+                print(firstname, last_name, sex, bdate, city)
+                vk.messages.send(peer_id=id, random_id=0, message=f'Имя: {firstname} \n'
+                                                                  f'Фамилия: {last_name} \n'
+                                                                  f'Город: {city} \n'
+                                                                  f'Пол: {sex} \n'
+                                                                  f'Дата рождения: {bdate} \n')
+                if sys_count == 0:
+                    vk.messages.send(peer_id=id, random_id=0, message=f'чтобы выйти пропишите /main')
 
 
 def wiki_dilog(vk, id, event, vk_session):
@@ -160,18 +188,6 @@ def wiki_dilog(vk, id, event, vk_session):
                                      random_id=random.randint(0, 2 ** 64))
 
                     continue
-
-
-def help(vk, id):
-    vk.messages.send(peer_id=id, random_id=0,
-                     message=f'"/info" - Получить информацию о адрессе \n'
-                             f'"/org" - Информация об организации \n'
-                             f'"/map" - Получить информацию по координатам \n'
-                             f'"/metro <address>" - Поиск ближайшего метро \n'
-                             f'"/wiki" - Поиск по запросу \n'
-                             f'/get_vk_info <user_id> - Поиск информации о юзере вк. \n'
-                             f'"/repeat_last_request" - Повторить предыдущий запрос \n'
-                             f'"/bomber" - Бомбер телефона')
 
 
 def get_geo(vk, id, vk_session):
@@ -392,20 +408,68 @@ def map(vk, id, vk_session):
 
         map(vk, id, vk_session)
 
-def get_photos(album_id, group_id, id, vk):
-    photos = []
-    vk_user_session = vk_api.VkApi(token=user_token)
-    vk_user = vk_user_session.get_api()
-    response = vk_user.photos.get(album_id=album_id, group_id=group_id)
-    if response["items"]:
-        for i in range(int(response["count"])):
-            photos_id = f'https://vk.com/photo{response["items"][i]["owner_id"]}_{response["items"][i]["id"]}'
-            photos.append(photos_id)
-    attachment = photos[random.randint(0, len(photos) - 1)]
-    attachment = attachment.split('/')
-    attachment = attachment[3]
-    print(attachment)
-    vk.messages.send(peer_id=id, random_id=0, attachment=attachment)
+
+def metro(vk, id, vk_session):
+    longpoll = VkLongPoll(vk_session)
+    vk.messages.send(peer_id=id, random_id=0, message='Введите адрес:')
+    sys_count = 0
+    wikipedia.set_lang('ru')
+    for event in longpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW:
+            if event.to_me:
+                metro_msg = event.text
+                if metro_msg == '/main':
+                    help(vk, id)
+                    return
+                try:
+                    req = "https://geocode-maps.yandex.ru/1.x/?apikey=40d1649f-0493-4b70-98ba-98533de7710b&geocode=" \
+                          + str(find_coord(metro_msg)) + "&format=json&kind=metro"
+                    response = requests.get(req)
+                    if response:
+                        json_response = response.json()
+                        try:
+                            metro1 = json_response["response"]["GeoObjectCollection"]["featureMember"][0][
+                                "GeoObject"]["metaDataProperty"]["GeocoderMetaData"]["Address"]["Components"]
+                            if 'метро' in metro1[4]["name"]:
+                                vk.messages.send(user_id=id,
+                                                 message=f'{metro1[4]["name"]}',
+                                                 random_id=random.randint(0, 2 ** 64))
+                                print(metro1[4]["name"])
+                                continue
+                            if 'метро' in metro1[5]["name"]:
+                                print(metro1[5]["name"])
+                                vk.messages.send(user_id=id,
+                                                 message=f'{metro1[5]["name"]}',
+                                                 random_id=random.randint(0, 2 ** 64))
+                                continue
+                        except IndexError:
+                            vk.messages.send(user_id=id,
+                                             message=f'Упсс, ничего не найдено. Попробуйте снова.',
+                                             random_id=random.randint(0, 2 ** 64))
+                        if sys_count == 0:
+                            vk.messages.send(user_id=id,
+                                             message=f'Вы можете повторить запрос в чате.  '
+                                                     f'Чтобы выйти в меню"/main" \n',
+                                             random_id=random.randint(0, 2 ** 64))
+                            sys_count += 1
+                except Exception:
+                    vk.messages.send(user_id=id,
+                                     message=f'Ошибка...',
+                                     random_id=random.randint(0, 2 ** 64))
+
+
+def find_coord(n):
+    req = "https://geocode-maps.yandex.ru/1.x/?apikey=40d1649f-0493-4b70-98ba-98533de7710b&geocode=" \
+          + str(n) + "&format=json"
+    resp = requests.get(req)
+    try:
+        if resp:
+            json_resp = resp.json()
+            find_coord = json_resp["response"]["GeoObjectCollection"]["featureMember"][0][
+                "GeoObject"]["boundedBy"]["Envelope"]["lowerCorner"]
+            return find_coord
+    except Exception:
+        return None
 
 
 if __name__ == '__main__':
