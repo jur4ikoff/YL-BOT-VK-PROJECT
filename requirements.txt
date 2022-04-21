@@ -6,3 +6,4 @@ sqlalchemy_serializer
 werkzeug
 wikipedia
 Pillow
+vk_api

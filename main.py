@@ -1,8 +1,9 @@
 from vk_api.longpoll import VkLongPoll, VkEventType
-from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from tokens import bot_token as TOKEN
 from find_spn import check_spn
 from data.users import User
+from msg_answer import go_msg, main_msg, NotFound_msg, error_msg
+from help import help_msg
 import vk_api
 import requests
 import random
@@ -37,15 +38,6 @@ def add_db(id, first_name, last_name, sex, bdate, city):  # Добавление
     db_sess.commit()
 
 
-def help(vk, id):
-    vk.messages.send(peer_id=id, random_id=0,
-                     message=f'"/info" - Получить информацию о адрессе \n'
-                             f'"/org" - Информация об организации \n'
-                             f'"/map" - Получить информацию по координатам \n'
-                             f'"/metro" - Поиск ближайшего метро \n'
-                             f'"/wiki" - Поиск по запросу \n'
-                             f'/get_vk_info - Поиск информации о юзере вк. \n')
-
 
 def main():
     global lang_flag
@@ -73,7 +65,6 @@ def main():
                         user_surname = user.surname
                         is_first_msg = False
                 msg = event.text.lower()
-                print(user_name, msg)
                 if hello_count == 0:
                     if is_first_msg:
                         # Если первое сообщение >>> Приветствие
@@ -90,8 +81,7 @@ def main():
                                                  'чтобы узнать о командах напишите "/help" ')
                         hello_count += 1
                 if msg == '/help':
-                    help(vk, id)
-                    get_keyboard_1(vk, id)
+                    help_msg(vk, id)
                 if '/wiki' == msg:
                     wiki_dilog(vk, id, event, vk_session)
                 if '/info' == msg:
@@ -106,19 +96,8 @@ def main():
                     vk_info(vk, id, vk_session)
 
 
-def get_keyboard_1(vk, id):
-    keyboard = VkKeyboard(one_time=True)
-    keyboard.add_button(label='/wiki', color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button(label='/info', color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button(label='/org', color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button(label='/map', color=VkKeyboardColor.PRIMARY)
-    keyboard.add_button(label='/metro', color=VkKeyboardColor.PRIMARY)
-    # keyboard.add_button(label='/get_vk_info', color=VkKeyboardColor.PRIMARY)
-    vk.messages.send(peer_id=id, random_id=0, message='Клавиатура с возможными командами',
-                     keyboard=keyboard.get_keyboard())
-
-
 def get_info(vk, id):
+    '''Возвращает информацию о пользователе'''
     responce = vk.users.get(user_ids=id, fields='city,bdate,city,sex')
     firstname, last_name, sex, bdate, city = None, None, None, None, None
     if responce:
@@ -136,12 +115,13 @@ def get_info(vk, id):
 
         except KeyError:
             pass
-    return firstname, last_name, sex, bdate, city
+    return firstname, last_name, sex, bdate, city  # # Вы
 
 
 def vk_info(vk, id, vk_session):
+    '''Отправляет информацию о позьзователе'''
     longpoll = VkLongPoll(vk_session)
-    vk.messages.send(peer_id=id, random_id=0, message='Введите запрос:')
+    go_msg(vk, id)
     sys_count = 0
     wikipedia.set_lang('ru')
     for event in longpoll.listen():
@@ -149,60 +129,63 @@ def vk_info(vk, id, vk_session):
             if event.to_me:
                 find_id = event.text
                 firstname, last_name, sex, bdate, city = get_info(vk, find_id)
-                print(firstname, last_name, sex, bdate, city)
-                vk.messages.send(peer_id=id, random_id=0, message=f'Имя: {firstname} \n'
-                                                                  f'Фамилия: {last_name} \n'
-                                                                  f'Город: {city} \n'
-                                                                  f'Пол: {sex} \n'
-                                                                  f'Дата рождения: {bdate} \n')
+                if find_id == '/main':
+                    help_msg(vk, id)
+                if firstname == None and last_name == None and sex == None and bdate == None and city == None:
+                    NotFound_msg(vk, id)
+                else:
+                    vk.messages.send(peer_id=id, random_id=0, message=f'Имя: {firstname} \n'
+                                                                      f'Фамилия: {last_name} \n'
+                                                                      f'Город: {city} \n'
+                                                                      f'Пол: {sex} \n'
+                                                                      f'Дата рождения: {bdate} \n')
                 if sys_count == 0:
-                    vk.messages.send(peer_id=id, random_id=0, message=f'чтобы выйти пропишите /main')
+                    main_msg(vk, id)
 
 
 def wiki_dilog(vk, id, event, vk_session):
+    '''Функция для поиска в википедии'''
     longpoll = VkLongPoll(vk_session)
-    vk.messages.send(peer_id=id, random_id=0, message='Введите запрос:')
-    # time.sleep(5)
+    go_msg(vk, id, msg='Введите запрос для поиска в википедии:')
     sys_count = 0
     wikipedia.set_lang('ru')
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW:
             if event.to_me:
                 wiki_msg = event.text
+                if wiki_msg == '/main':
+                    help_msg(vk, id)
+                    break
                 try:
                     a = wikipedia.summary(wiki_msg)
                     vk.messages.send(user_id=id,
                                      message=a,
                                      random_id=random.randint(0, 2 ** 64))
                     if sys_count == 0:
-                        vk.messages.send(user_id=id,
-                                         message=f'Чтобы выйти в меню"/main" \n',
-                                         random_id=random.randint(0, 2 ** 64))
+                        main_msg(vk, id)
                         sys_count += 1
                 except Exception:
-                    if wiki_msg == '/main':
-                        help(vk, id)
-                        break
-                    vk.messages.send(user_id=id,
-                                     message=f'Ошибка, Введите заново:',
-                                     random_id=random.randint(0, 2 ** 64))
-
+                    NotFound_msg(vk, id)
+                    if sys_count == 0:
+                        main_msg(vk, id)
+                        sys_count += 1
                     continue
 
 
 def get_geo(vk, id, vk_session):
+    """Поиск места по запросу"""
     longpoll = VkLongPoll(vk_session)
-    vk.messages.send(peer_id=id, random_id=0, message='Введите запрос:')
+    go_msg(vk, id, msg='Введите адрес:')
     sys_count = 0
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW:
             if event.to_me:
-                city, lower_coords, upper_coords, district = None, None, None, None
                 geocode_msg = event.text
-                api_server = "http://geocode-maps.yandex.ru/1.x/"
+                city, lower_coords, upper_coords, district = None, None, None, None
                 if geocode_msg == '/main':
-                    help(vk, id)
+                    help_msg(vk, id)
                     break
+                api_server = "http://geocode-maps.yandex.ru/1.x/"
                 params = {
                     "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
                     "geocode": geocode_msg,
@@ -221,10 +204,7 @@ def get_geo(vk, id, vk_session):
                         district = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"][
                             "metaDataProperty"]["GeocoderMetaData"]["Address"]["Components"][1]["name"]
                     except KeyError:
-                        vk.messages.send(user_id=id,
-                                         message=f'Ошибка, Введите заново:\n'
-                                                 f'Чтобы выйти в меню"/main" \n',
-                                         random_id=random.randint(0, 2 ** 64))
+                        error_msg(vk, id)
                     try:
                         if city:
                             vk.messages.send(user_id=id,
@@ -232,40 +212,29 @@ def get_geo(vk, id, vk_session):
                                                      f'Административный округ - {district}',
                                              random_id=random.randint(0, 2 ** 64))
                         else:
-                            vk.messages.send(user_id=id,
-                                             message=f'Ничего не найдено',
-                                             random_id=random.randint(0, 2 ** 64))
+                            NotFound_msg(vk, id)
                         if sys_count == 0:
-                            vk.messages.send(user_id=id,
-                                             message=f'Вы можете повторить запрос в чате.'
-                                                     f'Чтобы выйти в меню"/main" \n',
-                                             random_id=random.randint(0, 2 ** 64))
+                            main_msg(vk, id)
                             sys_count += 1
                     except Exception:
-                        if geocode_msg == '/main':
-                            help(vk, id)
-                            break
-                        vk.messages.send(user_id=id,
-                                         message=f'Ошибка, Введите заново:',
-                                         random_id=random.randint(0, 2 ** 64))
-
-                        continue
+                        pass
 
 
 def get_org(vk, id, vk_session):
+    """Функция поиска по организации"""
     longpoll = VkLongPoll(vk_session)
-    vk.messages.send(peer_id=id, random_id=0, message='Введите запрос: Адрес + название заведения')
+    go_msg(vk, id, msg='Введите запрос, Адрес и название:')
     sys_count = 0
-    try:
-        for event in longpoll.listen():
-            if event.type == VkEventType.MESSAGE_NEW:
-                if event.to_me:
-                    org_msg = event.text
-                    search_api_server = "https://search-maps.yandex.ru/v1/"
-                    api_key = "8e405774-72a5-4bc5-8061-c703891b2a5f"
-                    if org_msg == '/main':
-                        help(vk, id)
-                        break
+    for event in longpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW:
+            if event.to_me:
+                org_msg = event.text
+                if org_msg == '/main':
+                    help_msg(vk, id)
+                    break
+                search_api_server = "https://search-maps.yandex.ru/v1/"
+                api_key = "8e405774-72a5-4bc5-8061-c703891b2a5f"
+                try:
 
                     search_params = {
                         "apikey": api_key,
@@ -273,7 +242,6 @@ def get_org(vk, id, vk_session):
                         "lang": "ru_RU",
                         "type": "biz"
                     }
-
                     response = requests.get(search_api_server, params=search_params)
                     if response:
                         site2 = None
@@ -287,7 +255,6 @@ def get_org(vk, id, vk_session):
                         except KeyError:
                             pass
                         phone = json_response["features"][0]["properties"]["CompanyMetaData"]["Phones"][0]["formatted"]
-
                         org_name2 = json_response["features"][1]["properties"]["CompanyMetaData"]["name"]
                         org_address2 = json_response["features"][1]["properties"]["CompanyMetaData"]["address"]
                         try:
@@ -309,7 +276,9 @@ def get_org(vk, id, vk_session):
                                                      f'Название: {org_name}, адрес: {org_address} \n'
                                                      f'Телефон: {phone}',
                                              random_id=random.randint(0, 2 ** 64))
-
+                        vk.messages.send(user_id=id,
+                                         message=f'________________________________________',
+                                         random_id=random.randint(0, 2 ** 64))
                         if site2:
                             vk.messages.send(user_id=id,
                                              message=f'Второй ближайший магазин: \n'
@@ -324,25 +293,18 @@ def get_org(vk, id, vk_session):
                                                      f'Телефон: {phone2}',
                                              random_id=random.randint(0, 2 ** 64))
                         if sys_count == 0:
-                            vk.messages.send(user_id=id,
-                                             message=f'Вы можете повторить запрос в чате.  '
-                                                     f'Чтобы выйти в меню"/main" \n',
-                                             random_id=random.randint(0, 2 ** 64))
+                            main_msg(vk, id)
+                            main_msg(vk, id)
                             sys_count += 1
-                    else:
-                        print("Ошибка выполнения запроса:")
-                        print("Http статус:", response.status_code, "(", response.reason, ")")
-    except Exception as e:
-        vk.messages.send(user_id=id,
-                         message=f'Упсс. Ничего не нашлось',
-                         random_id=random.randint(0, 2 ** 64))
-        print(e)
+                except Exception as e:
+                    NotFound_msg(vk, id)
 
 
 def map(vk, id, vk_session):
+    '''Функция поиска по координатам + вывод картинки'''
     longpoll = VkLongPoll(vk_session)
-    vk.messages.send(peer_id=id, random_id=0, message='Введите координаты: широта долгота \n'
-                                                      'Пример: 38.518067 55.419967')
+    go_msg(vk, id, msg='Введите координаты: широта долгота \n'
+                       'Пример: 38.518067 55.419967')
     sys_count = 0
     try:
         for event in longpoll.listen():
@@ -350,7 +312,7 @@ def map(vk, id, vk_session):
                 if event.to_me:
                     coords = event.text
                     if coords == '/main':
-                        help(vk, id)
+                        help_msg(vk, id)
                         break
                     crds = ','.join(coords.split(' '))
                     text = None
@@ -392,26 +354,20 @@ def map(vk, id, vk_session):
                                          attachment=attachment,
                                          random_id=random.randint(0, 2 ** 64))
                     else:
-                        vk.messages.send(user_id=id,
-                                         message=f'Ошибка',
-                                         random_id=random.randint(0, 2 ** 64))
+                        error_msg(vk, id)
                     if sys_count == 0:
-                        vk.messages.send(user_id=id,
-                                         message=f'Вы можете повторить запрос в чате.  '
-                                                 f'Чтобы выйти в меню"/main" \n',
-                                         random_id=random.randint(0, 2 ** 64))
+                        main_msg(vk, id)
                         sys_count += 1
     except Exception:
-        vk.messages.send(user_id=id,
-                         message=f'Упс, ничего не нашлось...',
-                         random_id=random.randint(0, 2 ** 64))
+        NotFound_msg(vk, id)
 
         map(vk, id, vk_session)
 
 
 def metro(vk, id, vk_session):
+    '''Функция поиска ближайшего метро'''
     longpoll = VkLongPoll(vk_session)
-    vk.messages.send(peer_id=id, random_id=0, message='Введите адрес:')
+    go_msg(vk, id)
     sys_count = 0
     wikipedia.set_lang('ru')
     for event in longpoll.listen():
@@ -419,7 +375,7 @@ def metro(vk, id, vk_session):
             if event.to_me:
                 metro_msg = event.text
                 if metro_msg == '/main':
-                    help(vk, id)
+                    help_msg(vk, id)
                     return
                 try:
                     req = "https://geocode-maps.yandex.ru/1.x/?apikey=40d1649f-0493-4b70-98ba-98533de7710b&geocode=" \
@@ -443,22 +399,16 @@ def metro(vk, id, vk_session):
                                                  random_id=random.randint(0, 2 ** 64))
                                 continue
                         except IndexError:
-                            vk.messages.send(user_id=id,
-                                             message=f'Упсс, ничего не найдено. Попробуйте снова.',
-                                             random_id=random.randint(0, 2 ** 64))
+                            NotFound_msg(vk, id)
                         if sys_count == 0:
-                            vk.messages.send(user_id=id,
-                                             message=f'Вы можете повторить запрос в чате.  '
-                                                     f'Чтобы выйти в меню"/main" \n',
-                                             random_id=random.randint(0, 2 ** 64))
+                            main_msg(vk, id)
                             sys_count += 1
                 except Exception:
-                    vk.messages.send(user_id=id,
-                                     message=f'Ошибка...',
-                                     random_id=random.randint(0, 2 ** 64))
+                    error_msg(vk, id)
 
 
 def find_coord(n):
+    '''Функция поиска координат'''
     req = "https://geocode-maps.yandex.ru/1.x/?apikey=40d1649f-0493-4b70-98ba-98533de7710b&geocode=" \
           + str(n) + "&format=json"
     resp = requests.get(req)
