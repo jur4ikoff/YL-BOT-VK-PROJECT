@@ -294,7 +294,6 @@ def get_org(vk, id, vk_session):
                                              random_id=random.randint(0, 2 ** 64))
                         if sys_count == 0:
                             main_msg(vk, id)
-                            main_msg(vk, id)
                             sys_count += 1
                 except Exception as e:
                     NotFound_msg(vk, id)
